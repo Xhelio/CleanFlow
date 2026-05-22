@@ -2382,3 +2382,21 @@ window.addEventListener("storage", async (e) => {
         await refreshDashboardViews();
     }
 });
+
+// Auto-hide Header on Scroll Down, Show on Scroll Up
+let lastScrollTop = 0;
+const globalNavbar = document.querySelector(".navbar");
+
+if (globalNavbar) {
+    window.addEventListener("scroll", () => {
+        const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+        if (scrollTop > lastScrollTop && scrollTop > 100) {
+            // Scrolling down - hide
+            globalNavbar.classList.add("nav-hidden");
+        } else {
+            // Scrolling up or at top - show
+            globalNavbar.classList.remove("nav-hidden");
+        }
+        lastScrollTop = scrollTop <= 0 ? 0 : scrollTop; // Prevent negative scrolling values on iOS
+    }, { passive: true });
+}
