@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CleanFlow - Website Booking & POS Laundry Premium</title>
+    <!-- CSS Stylesheet -->
+    <link rel="stylesheet" href="/styles.css">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <!-- GLOBAL NAVBAR -->
+    <header class="navbar" style="top: 0;">
+        <div>
+            <a class="logo" onclick="switchView('landing')">
+                <i class="fa-solid fa-wind"></i> Clean<span>Flow</span>
+            </a>
+            <!-- Supabase Connection Status Badge -->
+            <div id="db-status-badge" class="db-status-badge disconnected">
+                <i class="fa-solid fa-database"></i> Supabase Disconnected (Periksa berkas .env)
+            </div>
+        </div>
+        <ul class="nav-links">
+            <li><a onclick="switchView('landing')">Home</a></li>
+            <li><a onclick="tryNavigateToRole('customer')">Portal Pelanggan</a></li>
+            <li><a onclick="tryNavigateToRole('courier')">Portal Kurir</a></li>
+            <li><a onclick="tryNavigateToRole('admin')">Dashboard Admin</a></li>
+        </ul>
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <button class="btn-theme" id="theme-toggle" onclick="toggleTheme()" title="Ganti Tema">
+                <i class="fa-solid fa-moon"></i>
+            </button>
+            <div id="nav-auth-container" style="display: flex; align-items: center; gap: 12px;">
+                <!-- Dynamically loaded by JS: Login Button or User Profile Widget -->
+            </div>
+        </div>
+    </header>
+
+    <!-- ==================== VIEW: LOGIN & REGISTER PANEL ==================== -->
+    <main id="login-view" class="view-section">
+        <div class="card" style="max-width: 480px; margin: 60px auto;">
+            <div style="display: flex; border-bottom: 1px solid var(--border-color); margin-bottom: 24px;">
+                <button class="sidebar-link active" id="tab-login-btn" onclick="toggleLoginTab('login')" style="flex:1; text-align:center; border-radius:0; justify-content:center;">
+                    <i class="fa-solid fa-right-to-bracket"></i> Masuk
+                </button>
+                <button class="sidebar-link" id="tab-register-btn" onclick="toggleLoginTab('register')" style="flex:1; text-align:center; border-radius:0; justify-content:center;">
+                    <i class="fa-solid fa-user-plus"></i> Daftar Baru
+                </button>
+            </div>
+
+            <!-- Panel 1: Login Form -->
+            <div id="pane-login" class="login-pane active">
+                <h2 style="margin-bottom: 8px;">Selamat Datang Kembali</h2>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">Silakan login dengan akun Pelanggan, Admin, atau Kurir Anda.</p>
+                
+                <form id="form-login" onsubmit="handleLoginSubmit(event)">
+                    <div class="form-group">
+                        <label>Alamat Email</label>
+                        <input type="email" class="form-control" id="login-email" placeholder="nama@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" class="form-control" id="login-password" placeholder="••••••••" required>
+                    </div>
+                    <button class="btn btn-primary" type="submit" style="width: 100%; justify-content: center; margin-top: 10px;">
+                        Masuk Ke Portal
+                    </button>
+                </form>
+
+                <div class="demo-accounts-box" style="margin-top: 24px; padding: 12px; background: rgba(109,40,217,0.06); border-radius: 8px; border: 1px dashed var(--primary); font-size: 0.8rem; line-height: 1.5;">
+                    <strong style="color: var(--primary);"><i class="fa-solid fa-info-circle"></i> Info Akun Demo (Supabase Seeds):</strong>
+                    <ul style="margin-left: 15px; margin-top: 5px;">
+                        <li><strong>Pelanggan:</strong> budi@cleanflow.com / password</li>
+                        <li><strong>Kurir Riko:</strong> riko@cleanflow.com / password</li>
+                        <li><strong>Admin:</strong> admin@cleanflow.com / admin123</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Panel 2: Register Form -->
+            <div id="pane-register" class="login-pane" style="display: none;">
+                <h2 style="margin-bottom: 8px;">Daftar Akun CleanFlow</h2>
+                <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">Lakukan pendaftaran instan untuk memesan laundry dan memantau cucian.</p>
+
+                <form id="form-register" onsubmit="handleRegisterSubmit(event)">
+                    <div class="form-group">
+                        <label>Nama Lengkap</label>
+                        <input type="text" class="form-control" id="reg-name" placeholder="Contoh: Budi Santoso" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Alamat Email</label>
+                        <input type="email" class="form-control" id="reg-email" placeholder="budi@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Nomor WhatsApp (Aktif)</label>
+                        <input type="text" class="form-control" id="reg-phone" placeholder="Contoh: 08123456789" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password Baru</label>
+                        <input type="password" class="form-control" id="reg-password" placeholder="Minimal 6 karakter" required minlength="6">
+                    </div>
+                    <button class="btn btn-primary" type="submit" style="width: 100%; justify-content: center; margin-top: 10px;">
+                        Buat Akun Pelanggan
+                    </button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <!-- ==================== VIEW 1: LANDING PAGE ==================== -->
+    <main id="landing-view" class="view-section active">
+        <section class="hero">
+            <div class="promo-badge"><i class="fa-solid fa-tag"></i> Diskon 20% bagi Pelanggan Baru! Kode: <strong>BARU20</strong></div>
+            <h1>Cucian Bersih Tanpa Ribet,<br>Tinggal Klik & Antar-Jemput</h1>
+            <p>CleanFlow menghadirkan layanan laundry profesional premium untuk pakaian, jas, karpet, hingga sepatu. Estimasi berat transparan, lacak status secara real-time, dan kurir handal langsung ke pintu Anda.</p>
+            <div style="display: flex; gap: 15px; margin-top: 10px;">
+                <button class="btn btn-primary btn-lg" onclick="tryNavigateToRole('customer', 'booking')">
+                    Booking Laundry Online <i class="fa-solid fa-arrow-right"></i>
+                </button>
+                <button class="btn btn-outline" onclick="scrollToCalculator()">
+                    Kalkulator Harga
+                </button>
+            </div>
+        </section>
+
+        <!-- Services Section -->
+        <section style="padding: 60px 24px; background: var(--bg-secondary); border-top: 1px solid var(--border-color);">
+            <div style="max-width: 1200px; margin: 0 auto; text-align: center;">
+                <h2 style="font-size: 2.2rem; margin-bottom: 12px;">Layanan Premium Kami</h2>
+                <p style="color: var(--text-muted); margin-bottom: 40px;">Kami memperlakukan pakaian Anda dengan cinta dan detergen berkualitas tinggi.</p>
+                <div class="grid-3">
+                    <div class="card" style="text-align: left;">
+                        <div class="service-icon"><i class="fa-solid fa-shirt"></i></div>
+                        <h3>Cuci Kiloan & Satuan</h3>
+                        <p style="color: var(--text-muted); margin-top: 8px;">Cuci kering lipat, cuci setrika, hingga perawatan khusus jas, dress, jaket kulit, boneka, dan gorden.</p>
+                    </div>
+                    <div class="card" style="text-align: left;">
+                        <div class="service-icon"><i class="fa-solid fa-truck-ramp-box"></i></div>
+                        <h3>Layanan Antar-Jemput</h3>
+                        <p style="color: var(--text-muted); margin-top: 8px;">Kurir kami menjemput cucian kotor dan mengantarkannya kembali dalam kondisi rapi dan wangi semerbak.</p>
+                    </div>
+                    <div class="card" style="text-align: left;">
+                        <div class="service-icon"><i class="fa-solid fa-bolt"></i></div>
+                        <h3>Paket Durasi Kilat</h3>
+                        <p style="color: var(--text-muted); margin-top: 8px;">Tersedia Paket Reguler (2-3 Hari), Paket Ekspres (24 Jam), hingga Paket Flash Super Kilat (hanya 6 Jam).</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Pricing Calculator Section -->
+        <section id="calculator-section" style="padding: 60px 24px;">
+            <div style="max-width: 1200px; margin: 0 auto;">
+                <div class="card calculator-card">
+                    <h2 style="text-align: center; margin-bottom: 20px;"><i class="fa-solid fa-calculator"></i> Simulasi Kalkulator Harga</h2>
+                    <div class="form-group">
+                        <label>Jenis Layanan</label>
+                        <select class="form-control" id="calc-service" onchange="calculatePriceEstimate()">
+                            <!-- Will be populated by JS -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Pilihan Perlakuan</label>
+                        <div class="treatment-toggle" id="calc-treatment-container">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Paket Durasi</label>
+                        <div class="duration-toggle" id="calc-duration-container">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+                    <div class="form-group" id="calc-qty-wrapper">
+                        <label id="calc-qty-label">Estimasi Berat (Kg)</label>
+                        <input type="number" class="form-control" id="calc-qty" value="3" min="1" oninput="calculatePriceEstimate()">
+                    </div>
+                    <div class="calc-result">
+                        <p style="color: var(--text-muted); font-size: 0.9rem;">Estimasi Total Biaya</p>
+                        <div class="price-tag" id="calc-total-price">Rp 0</div>
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 4px;">*Belum termasuk ongkir jika ada. Berat riil diukur di outlet.</p>
+                    </div>
+                    <button class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 20px;" onclick="tryNavigateToRole('customer', 'booking')">
+                        Pesan Sekarang dengan Detail Ini
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Testimonial & How it works -->
+        <section style="padding: 60px 24px; background: var(--bg-secondary);">
+            <div style="max-width: 1000px; margin: 0 auto; text-align: center;">
+                <h2 style="font-size: 2.2rem; margin-bottom: 40px;">Bagaimana Cara Kerjanya?</h2>
+                <div class="grid-4">
+                    <div>
+                        <div style="font-size: 2.5rem; color: var(--primary); margin-bottom: 10px;"><i class="fa-solid fa-mobile-screen-button"></i></div>
+                        <h4>1. Booking Online</h4>
+                        <p style="font-size: 0.85rem; color: var(--text-muted);">Pilih layanan, jadwalkan pickup lewat aplikasi.</p>
+                    </div>
+                    <div>
+                        <div style="font-size: 2.5rem; color: var(--primary); margin-bottom: 10px;"><i class="fa-solid fa-truck"></i></div>
+                        <h4>2. Dijemput Kurir</h4>
+                        <p style="font-size: 0.85rem; color: var(--text-muted);">Kurir datang mengambil pakaian Anda.</p>
+                    </div>
+                    <div>
+                        <div style="font-size: 2.5rem; color: var(--primary); margin-bottom: 10px;"><i class="fa-solid fa-soap"></i></div>
+                        <h4>3. Proses Cuci</h4>
+                        <p style="font-size: 0.85rem; color: var(--text-muted);">Pakaian ditimbang, dicuci bersih, dan disetrika rapi.</p>
+                    </div>
+                    <div>
+                        <div style="font-size: 2.5rem; color: var(--primary); margin-bottom: 10px;"><i class="fa-solid fa-circle-check"></i></div>
+                        <h4>4. Bersih & Kembali</h4>
+                        <p style="font-size: 0.85rem; color: var(--text-muted);">Cucian harum diantar kembali ke lokasi Anda.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ==================== VIEW 2: CUSTOMER PORTAL ==================== -->
+    <main id="customer-view" class="view-section">
+        <div class="dashboard-grid">
+            <!-- Sidebar Pelanggan -->
+            <aside class="card" style="height: fit-content;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color);">
+                    <div style="width: 45px; height: 45px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.2rem;" id="cust-avatar-char">
+                        B
+                    </div>
+                    <div>
+                        <h4 id="cust-profile-name">Budi Santoso</h4>
+                        <p style="font-size: 0.75rem; color: var(--text-muted);" id="cust-profile-label"><i class="fa-solid fa-gem" style="color: gold;"></i> Member</p>
+                    </div>
+                </div>
+                <div class="sidebar-nav">
+                    <button class="sidebar-link active" onclick="switchCustTab('cust-dashboard', this)">
+                        <i class="fa-solid fa-house"></i> Dashboard
+                    </button>
+                    <button class="sidebar-link" onclick="switchCustTab('cust-booking', this)">
+                        <i class="fa-solid fa-calendar-plus"></i> Booking Laundry
+                    </button>
+                    <button class="sidebar-link" onclick="switchCustTab('cust-tracking', this)">
+                        <i class="fa-solid fa-map-location-dot"></i> Lacak Status
+                    </button>
+                    <button class="sidebar-link" onclick="switchCustTab('cust-addresses', this)">
+                        <i class="fa-solid fa-location-dot"></i> Alamat Saya
+                    </button>
+                    <button class="sidebar-link" onclick="switchCustTab('cust-history', this)">
+                        <i class="fa-solid fa-clock-rotate-left"></i> Riwayat & Invoice
+                    </button>
+                </div>
+            </aside>
+
+            <!-- Konten Tab Pelanggan -->
+            <section class="card-container" style="display: flex; flex-direction: column; gap: 24px;">
+                
+                <!-- Tab: Dashboard Pelanggan -->
+                <div id="cust-dashboard" class="cust-dashboard-section active">
+                    <div class="grid-3" style="margin-bottom: 24px;">
+                        <div class="card" style="padding: 16px; display: flex; align-items: center; gap: 16px;">
+                            <div style="font-size: 2.2rem; color: var(--primary);"><i class="fa-solid fa-coins"></i></div>
+                            <div>
+                                <h3 id="cust-loyalty-pts">0</h3>
+                                <p style="font-size: 0.8rem; color: var(--text-muted);">Poin Loyalitas</p>
+                            </div>
+                        </div>
+                        <div class="card" style="padding: 16px; display: flex; align-items: center; gap: 16px;">
+                            <div style="font-size: 2.2rem; color: var(--secondary);"><i class="fa-solid fa-box-open"></i></div>
+                            <div>
+                                <h3 id="cust-active-orders-count">0</h3>
+                                <p style="font-size: 0.8rem; color: var(--text-muted);">Pesanan Aktif</p>
+                            </div>
+                        </div>
+                        <div class="card" style="padding: 16px; display: flex; align-items: center; gap: 16px;">
+                            <div style="font-size: 2.2rem; color: var(--accent);"><i class="fa-solid fa-percent"></i></div>
+                            <div>
+                                <h3>BARU20</h3>
+                                <p style="font-size: 0.8rem; color: var(--text-muted);">Kupon Tersedia</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card" style="margin-bottom: 24px;">
+                        <h3>Pesanan Aktif Anda</h3>
+                        <div id="cust-active-orders-list" style="margin-top: 15px;">
+                            <!-- Active orders dynamically listed here -->
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Promo Spesial Hari Ini</h3>
+                        <div style="margin-top: 15px; display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px;">
+                            <div style="min-width: 250px; background: linear-gradient(135deg, rgba(109,40,217,0.1), rgba(109,40,217,0.05)); border: 1px solid var(--border-color); padding: 16px; border-radius: 12px;">
+                                <h4 style="color: var(--primary);"><i class="fa-solid fa-socks"></i> Spesial Karpet</h4>
+                                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">Diskon 10% untuk cuci karpet bulu tebal tanpa minimal cucian.</p>
+                                <strong style="font-size: 0.85rem; display: block; margin-top: 8px;">KODE: BERSIHKARPET</strong>
+                            </div>
+                            <div style="min-width: 250px; background: linear-gradient(135deg, rgba(20,184,166,0.1), rgba(20,184,166,0.05)); border: 1px solid var(--border-color); padding: 16px; border-radius: 12px;">
+                                <h4 style="color: var(--secondary);"><i class="fa-solid fa-shirt"></i> Setrika Kilat</h4>
+                                <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 6px;">Butuh cepat? Tambah biaya 5rb, pakaian selesai disetrika dalam 3 jam.</p>
+                                <strong style="font-size: 0.85rem; display: block; margin-top: 8px;">Hubungi Admin</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Booking Laundry Wizard -->
+                <div id="cust-booking" class="cust-dashboard-section card">
+                    <h2 style="margin-bottom: 20px;"><i class="fa-solid fa-file-invoice-dollar"></i> Form Booking Laundry</h2>
+                    
+                    <!-- Steps indicator -->
+                    <div class="wizard-steps">
+                        <div class="wizard-progress" id="booking-wizard-progress"></div>
+                        <div class="wizard-step-node active" id="wizard-step-1">1</div>
+                        <div class="wizard-step-node" id="wizard-step-2">2</div>
+                        <div class="wizard-step-node" id="wizard-step-3">3</div>
+                        <div class="wizard-step-node" id="wizard-step-4">4</div>
+                    </div>
+
+                    <form id="booking-form" onsubmit="event.preventDefault();">
+                        <!-- Step 1: Services Selection -->
+                        <div class="wizard-pane active" id="wizard-pane-1">
+                            <h3 style="margin-bottom: 16px;">Langkah 1: Pilih Layanan & Estimasi</h3>
+                            
+                            <div class="form-group">
+                                <label>Pilih Layanan Utama</label>
+                                <select class="form-control" id="book-service" onchange="updateBookingWizardEstimates()">
+                                    <!-- Populated by JS -->
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Perlakuan Pakaian</label>
+                                <div class="treatment-toggle" id="book-treatment-container">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Paket Durasi</label>
+                                <div class="duration-toggle" id="book-duration-container">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+
+                            <!-- Kiloan Weight Input -->
+                            <div class="form-group" id="book-kiloan-qty-container">
+                                <label>Estimasi Berat (Kilogram)</label>
+                                <input type="number" class="form-control" id="book-kiloan-qty" value="3" min="1" step="0.1" oninput="updateBookingWizardEstimates()">
+                                <small style="color:var(--text-muted)">*Berat riil akan ditimbang kembali saat pakaian tiba di outlet.</small>
+                            </div>
+
+                            <!-- Satuan Item Selection List -->
+                            <div class="form-group" id="book-satuan-qty-container" style="display: none;">
+                                <label>Pilih Pakaian & Kuantitas</label>
+                                <div class="item-select-grid" id="book-satuan-items">
+                                    <!-- Populated by JS with item cards (Jas, Selimut, Sepatu, dll) -->
+                                </div>
+                            </div>
+
+                            <div style="display: flex; justify-content: flex-end; margin-top: 24px;">
+                                <button type="button" class="btn btn-primary" onclick="navigateWizard(2)">Lanjut <i class="fa-solid fa-arrow-right"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Penjadwalan & Catatan -->
+                        <div class="wizard-pane" id="wizard-pane-2">
+                            <h3 style="margin-bottom: 16px;">Langkah 2: Penjadwalan Antar-Jemput</h3>
+
+                            <div class="grid-2">
+                                <div class="form-group">
+                                    <label><i class="fa-solid fa-calendar-minus"></i> Tanggal Penjemputan (Pickup)</label>
+                                    <input type="date" class="form-control" id="book-pickup-date" required>
+                                </div>
+                                <div class="form-group">
+                                    <label><i class="fa-solid fa-clock"></i> Jam Penjemputan</label>
+                                    <select class="form-control" id="book-pickup-time">
+                                        <option value="09:00 - 11:00">Pagi (09:00 - 11:00)</option>
+                                        <option value="11:00 - 13:00">Siang (11:00 - 13:00)</option>
+                                        <option value="14:00 - 16:00">Sore (14:00 - 16:00)</option>
+                                        <option value="16:00 - 18:00">Sore Akhir (16:00 - 18:00)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="grid-2">
+                                <div class="form-group">
+                                    <label><i class="fa-solid fa-calendar-check"></i> Estimasi Tanggal Pengantaran</label>
+                                    <input type="text" class="form-control" id="book-delivery-date" disabled value="Otomatis terhitung">
+                                </div>
+                                <div class="form-group">
+                                    <label><i class="fa-solid fa-clock"></i> Jam Pengantaran (Delivery)</label>
+                                    <select class="form-control" id="book-delivery-time">
+                                        <option value="09:00 - 11:00">Pagi (09:00 - 11:00)</option>
+                                        <option value="11:00 - 13:00">Siang (11:00 - 13:00)</option>
+                                        <option value="14:00 - 16:00">Sore (14:00 - 16:00)</option>
+                                        <option value="16:00 - 18:00">Sore Akhir (16:00 - 18:00)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label><i class="fa-solid fa-comment-dots"></i> Catatan Khusus untuk Cucian</label>
+                                <textarea class="form-control" id="book-notes" placeholder="Contoh: Baju putih mohon dipisah, jangan pakai pewangi menyengat, dll." rows="3"></textarea>
+                            </div>
+
+                            <div style="display: flex; justify-content: space-between; margin-top: 24px;">
+                                <button type="button" class="btn btn-outline" onclick="navigateWizard(1)"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
+                                <button type="button" class="btn btn-primary" onclick="navigateWizard(3)">Lanjut <i class="fa-solid fa-arrow-right"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Alamat & Pembayaran -->
+                        <div class="wizard-pane" id="wizard-pane-3">
+                            <h3 style="margin-bottom: 16px;">Langkah 3: Alamat & Metode Pembayaran</h3>
+
+                            <div class="form-group">
+                                <label>Pilih Alamat Pengiriman</label>
+                                <div class="address-grid" id="book-addresses-container">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Pilih Metode Pembayaran</label>
+                                <div class="grid-3">
+                                    <div class="item-card" onclick="selectPaymentMethod('qris', this)">
+                                        <div style="font-size: 1.5rem; color: var(--primary);"><i class="fa-solid fa-qrcode"></i></div>
+                                        <strong style="font-size: 0.85rem;">QRIS / E-Wallet</strong>
+                                    </div>
+                                    <div class="item-card" onclick="selectPaymentMethod('bank', this)">
+                                        <div style="font-size: 1.5rem; color: var(--primary);"><i class="fa-solid fa-building-columns"></i></div>
+                                        <strong style="font-size: 0.85rem;">Transfer Bank</strong>
+                                    </div>
+                                    <div class="item-card selected" onclick="selectPaymentMethod('cod', this)">
+                                        <div style="font-size: 1.5rem; color: var(--primary);"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+                                        <strong style="font-size: 0.85rem;">Bayar di Tempat (COD)</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Masukkan Kode Voucher (Opsional)</label>
+                                <div style="display: flex; gap: 10px;">
+                                    <input type="text" class="form-control" id="book-coupon" placeholder="Contoh: BARU20">
+                                    <button type="button" class="btn btn-outline" onclick="applyCouponCode()">Gunakan</button>
+                                </div>
+                                <span id="coupon-alert" style="font-size: 0.8rem; font-weight: 600; display: block; margin-top: 5px;"></span>
+                            </div>
+
+                            <div style="display: flex; justify-content: space-between; margin-top: 24px;">
+                                <button type="button" class="btn btn-outline" onclick="navigateWizard(2)"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
+                                <button type="button" class="btn btn-primary" onclick="navigateWizard(4)">Konfirmasi Rincian <i class="fa-solid fa-arrow-right"></i></button>
+                            </div>
+                        </div>
+
+                        <!-- Step 4: Ringkasan & Submit -->
+                        <div class="wizard-pane" id="wizard-pane-4">
+                            <h3 style="margin-bottom: 16px;">Langkah 4: Konfirmasi Rincian Pesanan</h3>
+
+                            <div class="card" style="background: rgba(148, 163, 184, 0.05); border: 1px solid var(--border-color); margin-bottom: 20px;">
+                                <h4 style="border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 12px;">Rincian Booking</h4>
+                                <div id="booking-summary-html" style="font-size: 0.9rem;">
+                                    <!-- Populated by JS -->
+                                </div>
+                            </div>
+
+                            <div style="display: flex; justify-content: space-between; margin-top: 24px;">
+                                <button type="button" class="btn btn-outline" onclick="navigateWizard(3)"><i class="fa-solid fa-arrow-left"></i> Kembali</button>
+                                <button type="button" class="btn btn-primary" id="btn-submit-booking" onclick="submitBookingOrder()">
+                                    <i class="fa-solid fa-circle-check"></i> Kirim & Pesan Sekarang
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tab: Lacak Status Real-time -->
+                <div id="cust-tracking" class="cust-dashboard-section card">
+                    <h2><i class="fa-solid fa-magnifying-glass-location"></i> Pelacakan Status Real-Time</h2>
+                    <p style="color: var(--text-muted); font-size: 0.9rem;">Masukkan nomor ID pesanan Anda untuk melacak cucian.</p>
+                    
+                    <div style="display: flex; gap: 10px; margin-top: 15px; margin-bottom: 24px;">
+                        <input type="text" class="form-control" id="track-order-id" placeholder="Contoh: TR-1001">
+                        <button class="btn btn-primary" onclick="trackOrder()"><i class="fa-solid fa-magnifying-glass"></i> Lacak</button>
+                    </div>
+
+                    <div id="track-result" style="display: none;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; margin-bottom: 20px;">
+                            <div>
+                                <h4 style="font-size: 1.1rem;" id="track-result-id">ORDER ID: TR-1001</h4>
+                                <p style="font-size: 0.8rem; color: var(--text-muted);" id="track-result-service">Layanan: Cuci Kiloan Setrika (Reguler)</p>
+                            </div>
+                            <div id="track-result-badge-container">
+                                <span class="badge badge-process">Sedang Dicuci</span>
+                            </div>
+                        </div>
+
+                        <div class="grid-2" style="margin-bottom: 24px;">
+                            <div>
+                                <h5 style="margin-bottom: 4px;">Detail Pakaian:</h5>
+                                <p style="font-size: 0.85rem;" id="track-result-detail">Berat riil: 4.5 Kg | 2 Tas Pakaian</p>
+                                <p style="font-size: 0.85rem;" id="track-result-notes">Catatan: Jangan pakai pelembut</p>
+                            </div>
+                            <div>
+                                <h5 style="margin-bottom: 4px;">Kurir Antar-Jemput:</h5>
+                                <p style="font-size: 0.85rem;" id="track-result-courier"><i class="fa-solid fa-user-tie"></i> Riko (Driver)</p>
+                                <p style="font-size: 0.85rem;" id="track-result-delivery">Pickup: 23 Mei 2026</p>
+                            </div>
+                        </div>
+
+                        <h3>Alur Proses Cucian</h3>
+                        <div class="stepper" id="track-stepper">
+                            <!-- Stepper nodes populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Alamat Saya -->
+                <div id="cust-addresses" class="cust-dashboard-section card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2><i class="fa-solid fa-location-dot"></i> Daftar Alamat Saya</h2>
+                        <button class="btn btn-outline" onclick="openAddAddressModal()"><i class="fa-solid fa-plus"></i> Tambah Alamat</button>
+                    </div>
+                    <div class="address-grid" id="cust-addresses-list">
+                        <!-- Loaded by JS -->
+                    </div>
+                </div>
+
+                <!-- Tab: Riwayat Pesanan & Ulasan -->
+                <div id="cust-history" class="cust-dashboard-section card">
+                    <h2><i class="fa-solid fa-history"></i> Riwayat Transaksi</h2>
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 20px;">Menyimpan riwayat seluruh transaksi booking laundry Anda.</p>
+                    
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>ID Order</th>
+                                    <th>Tanggal</th>
+                                    <th>Layanan</th>
+                                    <th>Harga Akhir</th>
+                                    <th>Status</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="cust-history-tbody">
+                                <!-- Loaded dynamically by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </section>
+        </div>
+    </main>
+
+    <!-- ==================== VIEW 3: COURIER INTERFACE ==================== -->
+    <main id="courier-view" class="view-section">
+        <div style="max-width: 600px; margin: 0 auto;">
+            <div class="card" style="margin-bottom: 20px; text-align: center;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 12px;">
+                    <div style="width: 50px; height: 50px; border-radius: 50%; background: var(--secondary); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.3rem;" id="courier-avatar-char">
+                        R
+                    </div>
+                    <div style="text-align: left;">
+                        <h3 id="courier-profile-name">Riko (Kurir CleanFlow)</h3>
+                        <p style="font-size: 0.8rem; color: var(--text-muted);" id="courier-profile-region"><i class="fa-solid fa-truck"></i> Wilayah Kerja: South Jakarta</p>
+                    </div>
+                </div>
+                <div class="grid-2">
+                    <div style="background: rgba(148,163,184,0.08); padding: 10px; border-radius: 8px;">
+                        <h4 id="courier-pending-count">0</h4>
+                        <p style="font-size: 0.75rem; color: var(--text-muted);">Tugas Pending</p>
+                    </div>
+                    <div style="background: rgba(148,163,184,0.08); padding: 10px; border-radius: 8px;">
+                        <h4 id="courier-completed-count">0</h4>
+                        <p style="font-size: 0.75rem; color: var(--text-muted);">Selesai Hari Ini</p>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 16px; border-bottom: 1px solid var(--border-color); display: flex; gap: 15px;">
+                <button class="sidebar-link active" id="courier-tab-active-btn" onclick="toggleCourierTasks('active')" style="width: auto;">Tugas Aktif</button>
+                <button class="sidebar-link" id="courier-tab-history-btn" onclick="toggleCourierTasks('completed')" style="width: auto;">Riwayat Tugas</button>
+            </div>
+
+            <div id="courier-tasks-container">
+                <!-- Tasks will load here dynamically via JS -->
+            </div>
+        </div>
+    </main>
+
+    <!-- ==================== VIEW 4: ADMIN PORTAL ==================== -->
+    <main id="admin-view" class="view-section">
+        <div class="admin-layout">
+            <!-- Sidebar Admin -->
+            <aside class="admin-sidebar">
+                <div style="padding: 12px 16px; border-bottom: 1px solid var(--border-color); margin-bottom: 12px;">
+                    <h4 id="admin-profile-name">Administrator</h4>
+                    <p style="font-size: 0.75rem; color: var(--text-muted);"><i class="fa-solid fa-lock"></i> Owner Level</p>
+                </div>
+                <button class="sidebar-link active" onclick="switchAdminTab('admin-dashboard', this)">
+                    <i class="fa-solid fa-chart-line"></i> Dashboard Ringkasan
+                </button>
+                <button class="sidebar-link" onclick="switchAdminTab('admin-orders', this)">
+                    <i class="fa-solid fa-list-check"></i> Kelola Pesanan
+                </button>
+                <button class="sidebar-link" onclick="switchAdminTab('admin-pos', this)">
+                    <i class="fa-solid fa-cash-register"></i> Kasir Offline (POS)
+                </button>
+                <button class="sidebar-link" onclick="switchAdminTab('admin-services', this)">
+                    <i class="fa-solid fa-tags"></i> Harga & Layanan
+                </button>
+                <button class="sidebar-link" onclick="switchAdminTab('admin-crm', this)">
+                    <i class="fa-solid fa-users"></i> CRM Pelanggan
+                </button>
+                <button class="sidebar-link" onclick="switchAdminTab('admin-inventory', this)">
+                    <i class="fa-solid fa-boxes-stacked"></i> Stok Inventaris
+                </button>
+            </aside>
+
+            <!-- Isi Konten Admin -->
+            <section style="display: flex; flex-direction: column; gap: 24px;">
+                
+                <!-- Tab 1: Dashboard Ringkasan -->
+                <div id="admin-dashboard" class="admin-content-section active">
+                    <!-- Low Stock Inventory Alert -->
+                    <div id="admin-low-stock-alert-container">
+                        <!-- Alert dynamic content -->
+                    </div>
+
+                    <div class="grid-4" style="margin-bottom: 24px;">
+                        <div class="card" style="padding: 16px;">
+                            <div style="font-size: 1.8rem; color: var(--primary); margin-bottom: 4px;"><i class="fa-solid fa-wallet"></i></div>
+                            <h3 id="admin-stat-revenue">Rp 0</h3>
+                            <p style="font-size: 0.75rem; color: var(--text-muted);">Pendapatan (Bulan Ini)</p>
+                        </div>
+                        <div class="card" style="padding: 16px;">
+                            <div style="font-size: 1.8rem; color: var(--secondary); margin-bottom: 4px;"><i class="fa-solid fa-boxes-packing"></i></div>
+                            <h3 id="admin-stat-active-orders">0</h3>
+                            <p style="font-size: 0.75rem; color: var(--text-muted);">Pesanan Aktif</p>
+                        </div>
+                        <div class="card" style="padding: 16px;">
+                            <div style="font-size: 1.8rem; color: var(--status-pending); margin-bottom: 4px;"><i class="fa-solid fa-hourglass-half"></i></div>
+                            <h3 id="admin-stat-pending-orders">0</h3>
+                            <p style="font-size: 0.75rem; color: var(--text-muted);">Menunggu Pickup</p>
+                        </div>
+                        <div class="card" style="padding: 16px;">
+                            <div style="font-size: 1.8rem; color: var(--status-success); margin-bottom: 4px;"><i class="fa-solid fa-shirt"></i></div>
+                            <h3 id="admin-stat-completed-orders">0</h3>
+                            <p style="font-size: 0.75rem; color: var(--text-muted);">Cucian Diselesaikan</p>
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <!-- Pendapatan Chart -->
+                        <div class="card">
+                            <h3><i class="fa-solid fa-chart-simple"></i> Tren Grafik Pendapatan Mingguan</h3>
+                            <div class="chart-container" id="revenue-chart-container">
+                                <!-- Dynamic SVG Chart loaded via JS -->
+                            </div>
+                        </div>
+
+                        <!-- Prioritas Queue System -->
+                        <div class="card">
+                            <h3><i class="fa-solid fa-sort-amount-down-alt"></i> Prioritas Antrean Cucian</h3>
+                            <p style="color: var(--text-muted); font-size: 0.8rem; margin-bottom: 10px;">Diurutkan cerdas: Paket Kilat (Flash > Ekspres > Reguler) & Tanggal Masuk.</p>
+                            <div style="max-height: 250px; overflow-y: auto;" id="admin-queue-list">
+                                <!-- Order Queue items loads here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 2: Kelola Pesanan -->
+                <div id="admin-orders" class="admin-content-section card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
+                        <h2>Manajemen Pesanan Global</h2>
+                        <div style="display: flex; gap: 8px;">
+                            <select class="form-control" style="width: auto; padding: 6px 12px; font-size: 0.85rem;" id="admin-order-filter-status" onchange="renderAdminOrders()">
+                                <option value="all">Semua Status</option>
+                                <option value="pending-pickup">Menunggu Pickup</option>
+                                <option value="pickup-inprogress">Kurir Menuju Lokasi</option>
+                                <option value="washing">Proses Cuci</option>
+                                <option value="ready">Siap Diantar</option>
+                                <option value="completed">Selesai</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>ID Order</th>
+                                    <th>Pelanggan</th>
+                                    <th>Layanan & Paket</th>
+                                    <th>Berat / Jml</th>
+                                    <th>Harga</th>
+                                    <th>Status</th>
+                                    <th>Kurir</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-orders-tbody">
+                                <!-- JS Populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tab 3: POS Offline -->
+                <div id="admin-pos" class="admin-content-section pos-container">
+                    <!-- POS Left: Service selector -->
+                    <div class="card">
+                        <h3>POS Kasir Kas Offline</h3>
+                        <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px;">Layanan kasir langsung untuk pelanggan offline yang datang ke gerai laundry.</p>
+                        
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label>Pilih Layanan Utama</label>
+                                <select class="form-control" id="pos-service" onchange="updatePOSSummary()">
+                                    <!-- Populated by JS -->
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Paket Durasi</label>
+                                <select class="form-control" id="pos-duration" onchange="updatePOSSummary()">
+                                    <option value="reguler">Reguler (2-3 Hari)</option>
+                                    <option value="ekspres">Ekspres (24 Jam)</option>
+                                    <option value="flash">Flash (6 Jam)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Perlakuan Pakaian</label>
+                            <select class="form-control" id="pos-treatment" onchange="updatePOSSummary()">
+                                <option value="cuci-lipat">Cuci Kering Lipat</option>
+                                <option value="cuci-setrika">Cuci Kering Setrika</option>
+                                <option value="setrika">Setrika Saja</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Berat Riil Timbangan (Kg) / Jumlah Satuan</label>
+                            <input type="number" class="form-control" id="pos-qty" value="1" min="0.1" step="0.1" oninput="updatePOSSummary()">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Nama Pelanggan Offline</label>
+                            <input type="text" class="form-control" id="pos-cust-name" placeholder="Contoh: Ibu Rina (Offline)">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Nomor WhatsApp Pelanggan</label>
+                            <input type="text" class="form-control" id="pos-cust-wa" placeholder="Contoh: 08123456789">
+                        </div>
+                    </div>
+
+                    <!-- POS Right: Checkout receipt -->
+                    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <h3 style="border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-bottom: 15px;">Checkout Pesanan</h3>
+                            <div style="font-size: 0.9rem;" id="pos-summary-receipt">
+                                <!-- Generated by JS -->
+                            </div>
+                        </div>
+                        <div style="margin-top: 20px;">
+                            <div class="form-group">
+                                <label>Uang Tunai Diterima (Kembalian)</label>
+                                <input type="number" class="form-control" id="pos-cash-received" placeholder="Rp 0" oninput="calculatePOSChange()">
+                                <small id="pos-change-label" style="font-weight: 600; color: var(--primary); margin-top: 4px; display: block;"></small>
+                            </div>
+                            <button class="btn btn-primary" style="width: 100%; justify-content: center;" onclick="submitPOSOrder()">
+                                <i class="fa-solid fa-receipt"></i> Proses Cetak & Simpan Order
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab 4: Pengaturan Layanan -->
+                <div id="admin-services" class="admin-content-section card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h2>Pengaturan Layanan & Tarif</h2>
+                        <button class="btn btn-outline" onclick="openAddServiceModal()"><i class="fa-solid fa-plus"></i> Tambah Layanan</button>
+                    </div>
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Nama Layanan</th>
+                                    <th>Kategori</th>
+                                    <th>Harga Dasar (Kg/Pcs)</th>
+                                    <th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-services-tbody">
+                                <!-- Loaded dynamically by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tab 5: CRM Pelanggan -->
+                <div id="admin-crm" class="admin-content-section card">
+                    <h2>Customer Relationship Management (CRM)</h2>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;">Melihat data loyalitas poin, daftar alamat, dan riwayat pesanan dari para pelanggan.</p>
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Nama Pelanggan</th>
+                                    <th>Nomor WhatsApp</th>
+                                    <th>Poin Loyalitas</th>
+                                    <th>Total Transaksi</th>
+                                    <th>Alamat Terdaftar</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-crm-tbody">
+                                <!-- Loaded dynamically by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tab 6: Inventaris Bahan -->
+                <div id="admin-inventory" class="admin-content-section card">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h2>Manajemen Stok Bahan Baku</h2>
+                        <button class="btn btn-outline" onclick="openAddStockModal()"><i class="fa-solid fa-plus"></i> Restock Bahan</button>
+                    </div>
+                    <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 16px;">Peringatan otomatis berkedip merah saat stok berada di bawah batas minimum.</p>
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Nama Barang</th>
+                                    <th>Stok Tersedia</th>
+                                    <th>Batas Minimum</th>
+                                    <th>Satuan</th>
+                                    <th>Status Stok</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-inventory-tbody">
+                                <!-- Loaded dynamically by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </section>
+        </div>
+    </main>
+
+    <!-- ==================== MODAL DIALOGS ==================== -->
+    <div class="modal-overlay" id="modal-overlay">
+        <!-- Dynamic modal wrapper -->
+        <div class="modal-content" id="modal-content-wrapper">
+            <!-- Loaded dynamically depending on triggers -->
+        </div>
+    </div>
+
+    <!-- ==================== WHATSAPP NOTIFICATION TOAST ==================== -->
+    <div class="wa-toast-container" id="wa-toast-container">
+        <!-- Toast elements popup here -->
+    </div>
+
+    <footer style="background: var(--bg-secondary); border-top: 1px solid var(--border-color); padding: 30px 24px; margin-top: 80px; text-align: center; font-size: 0.85rem; color: var(--text-muted);">
+        <p>&copy; 2026 CleanFlow Laundry. Designed with <i class="fa-solid fa-heart" style="color: var(--accent);"></i> for Premium Customer Experiences.</p>
+    </footer>
+
+    <!-- App JavaScript (Module Entry Point) -->
+    <script type="module" src="/app.js"></script>
+</body>
+</html>
