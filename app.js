@@ -434,8 +434,10 @@ function tryNavigateToRole(role, targetSubTab) {
     switchView(role, targetSubTab);
 }
 
-// Universal tab switcher (views)
 function switchView(viewId, targetSub) {
+    if (window.closeMobileMenu) {
+        window.closeMobileMenu();
+    }
     // Hide all view panes
     document.querySelectorAll(".view-section").forEach(sec => sec.classList.remove("active"));
     
@@ -2383,12 +2385,46 @@ window.addEventListener("storage", async (e) => {
     }
 });
 
+// Toggle and Close Mobile Menu Drawer
+window.toggleMobileMenu = function() {
+    const navLinks = document.querySelector(".nav-links");
+    const toggleIcon = document.querySelector("#mobile-menu-toggle i");
+    if (navLinks) {
+        navLinks.classList.toggle("active");
+        if (navLinks.classList.contains("active")) {
+            toggleIcon.classList.remove("fa-bars");
+            toggleIcon.classList.add("fa-xmark");
+        } else {
+            toggleIcon.classList.remove("fa-xmark");
+            toggleIcon.classList.add("fa-bars");
+        }
+    }
+};
+
+window.closeMobileMenu = function() {
+    const navLinks = document.querySelector(".nav-links");
+    const toggleIcon = document.querySelector("#mobile-menu-toggle i");
+    if (navLinks && navLinks.classList.contains("active")) {
+        navLinks.classList.remove("active");
+        if (toggleIcon) {
+            toggleIcon.classList.remove("fa-xmark");
+            toggleIcon.classList.add("fa-bars");
+        }
+    }
+};
+
 // Auto-hide Header on Scroll Down, Show on Scroll Up
 let lastScrollTop = 0;
 const globalNavbar = document.querySelector(".navbar");
 
 if (globalNavbar) {
     window.addEventListener("scroll", () => {
+        // Prevent hiding navbar if mobile menu is currently open
+        const navLinks = globalNavbar.querySelector(".nav-links");
+        if (navLinks && navLinks.classList.contains("active")) {
+            return;
+        }
+
         const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
         if (scrollTop > lastScrollTop && scrollTop > 100) {
             // Scrolling down - hide
