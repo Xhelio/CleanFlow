@@ -116,7 +116,15 @@ async function saveCollection(table, fallbackKey, data) {
 }
 
 // Specific wrappers mapped to Supabase columns (camelCase local -> snake_case supabase)
-async function fetchServices() { return await getCollection('services', 'cf_services'); }
+async function fetchServices() {
+    const data = await getCollection('services', 'cf_services');
+    return data.map(d => ({
+        id: d.id,
+        name: d.name,
+        category: d.category,
+        basePrice: d.base_price !== undefined ? parseFloat(d.base_price) : parseFloat(d.basePrice)
+    }));
+}
 async function fetchTreatments() { return await getCollection('treatments', 'cf_treatments'); }
 async function fetchDurations() { return await getCollection('durations', 'cf_durations'); }
 
