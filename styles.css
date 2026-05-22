@@ -94,24 +94,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Connection Badges */
 .db-status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 20px;
-    margin-top: 4px;
-    width: fit-content;
-    transition: var(--transition);
-}
-.db-status-badge.connected {
-    background: rgba(34, 197, 94, 0.15);
-    color: var(--status-success);
-}
-.db-status-badge.disconnected {
-    background: rgba(239, 68, 68, 0.12);
-    color: var(--status-danger);
+    display: none !important;
 }
 
 .navbar {
