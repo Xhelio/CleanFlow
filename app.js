@@ -2298,6 +2298,9 @@ function openQRISModal(order) {
     const overlay = document.getElementById("modal-overlay");
     const wrapper = document.getElementById("modal-content-wrapper");
     
+    const qrData = `CleanFlow Laundry\nOrder ID: ${order.id}\nTotal: Rp ${order.price.toLocaleString("id-ID")}\nStatus: Lunas`;
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(qrData)}`;
+
     overlay.classList.add("active");
     wrapper.innerHTML = `
         <div class="modal-header">
@@ -2306,22 +2309,14 @@ function openQRISModal(order) {
         </div>
         <div style="text-align: center; padding: 15px;">
             <p style="margin-bottom: 12px; font-weight:600;">Scan QRIS di bawah ini untuk membayar:</p>
-            <div style="background: white; padding: 16px; display: inline-block; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 15px;">
-                <svg width="200" height="200" viewBox="0 0 100 100" style="display:block;">
-                    <rect width="100" height="100" fill="white"/>
-                    <rect x="5" y="5" width="20" height="20" fill="black"/>
-                    <rect x="10" y="10" width="10" height="10" fill="white"/>
-                    <rect x="75" y="5" width="20" height="20" fill="black"/>
-                    <rect x="80" y="10" width="10" height="10" fill="white"/>
-                    <rect x="5" y="75" width="20" height="20" fill="black"/>
-                    <rect x="10" y="80" width="10" height="10" fill="white"/>
-                    <rect x="30" y="30" width="10" height="10" fill="black"/>
-                    <rect x="50" y="30" width="15" height="5" fill="black"/>
-                    <rect x="35" y="45" width="20" height="15" fill="black"/>
-                    <rect x="65" y="65" width="15" height="15" fill="black"/>
-                    <rect x="45" y="75" width="10" height="10" fill="black"/>
-                    <rect x="75" y="45" width="15" height="10" fill="black"/>
-                </svg>
+            <div style="background: white; padding: 16px; display: inline-block; border-radius: 12px; border: 1px solid var(--border-color); margin-bottom: 15px; position: relative; width: 232px; height: 232px; vertical-align: middle;">
+                <div id="qris-spinner" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                    <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2rem; color: var(--primary);"></i>
+                </div>
+                <img src="${qrUrl}" 
+                     alt="QRIS Code" 
+                     onload="document.getElementById('qris-spinner').style.display='none'"
+                     style="display:block; width:200px; height:200px; border-radius: 4px;">
             </div>
             <h4 style="color: var(--primary); font-size:1.3rem;">Rp ${order.price.toLocaleString("id-ID")}</h4>
             <p style="font-size:0.75rem; color:var(--text-muted); margin-top: 6px;">Status: Menunggu Pembayaran...</p>
