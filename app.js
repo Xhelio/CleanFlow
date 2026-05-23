@@ -115,6 +115,10 @@ async function saveCollection(table, fallbackKey, data) {
     localStorage.setItem(fallbackKey, JSON.stringify(data));
 }
 
+let cachedServices = null;
+let cachedTreatments = null;
+let cachedDurations = null;
+
 function mapDatabaseServiceToModel(d) {
     return {
         id: d.id,
@@ -126,11 +130,21 @@ function mapDatabaseServiceToModel(d) {
 
 // Specific wrappers mapped to Supabase columns (camelCase local -> snake_case supabase)
 async function fetchServices() {
+    if (cachedServices) return cachedServices;
     const data = await getCollection('services', 'cf_services');
-    return data.map(mapDatabaseServiceToModel);
+    cachedServices = data.map(mapDatabaseServiceToModel);
+    return cachedServices;
 }
-async function fetchTreatments() { return await getCollection('treatments', 'cf_treatments'); }
-async function fetchDurations() { return await getCollection('durations', 'cf_durations'); }
+async function fetchTreatments() {
+    if (cachedTreatments) return cachedTreatments;
+    cachedTreatments = await getCollection('treatments', 'cf_treatments');
+    return cachedTreatments;
+}
+async function fetchDurations() {
+    if (cachedDurations) return cachedDurations;
+    cachedDurations = await getCollection('durations', 'cf_durations');
+    return cachedDurations;
+}
 
 async function fetchAddresses(userId) {
     if (supabaseActive) {
@@ -144,7 +158,15 @@ async function fetchAddresses(userId) {
 async function fetchInventory() { 
     if (supabaseActive) {
         const { data, error } = await supabase.from('inventory').select('*');
-        if (!error) return data;
+        if (!error) {
+            return data.map(i => ({
+                id: i.id,
+                name: i.name,
+                stock: parseFloat(i.stock),
+                min_stock: parseFloat(i.min_stock),
+                unit: i.unit
+            }));
+        }
     }
     return JSON.parse(localStorage.getItem('cf_inventory')) || [];
 }
@@ -288,6 +310,7 @@ async function updateInventoryStock(itemId, newStock) {
 
 // Add Service wrapper
 async function insertService(service) {
+    cachedServices = null; // Invalidate cache
     if (supabaseActive) {
         const { error } = await supabase.from('services').insert([{
             id: service.id,
@@ -305,6 +328,7 @@ async function insertService(service) {
 
 // Delete Service wrapper
 async function deleteServiceFromDB(sid) {
+    cachedServices = null; // Invalidate cache
     if (supabaseActive) {
         const { error } = await supabase.from('services').delete().eq('id', sid);
         if (!error) return true;
