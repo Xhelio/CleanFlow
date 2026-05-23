@@ -115,15 +115,19 @@ async function saveCollection(table, fallbackKey, data) {
     localStorage.setItem(fallbackKey, JSON.stringify(data));
 }
 
-// Specific wrappers mapped to Supabase columns (camelCase local -> snake_case supabase)
-async function fetchServices() {
-    const data = await getCollection('services', 'cf_services');
-    return data.map(d => ({
+function mapDatabaseServiceToModel(d) {
+    return {
         id: d.id,
         name: d.name,
         category: d.category,
         basePrice: d.base_price !== undefined ? parseFloat(d.base_price) : parseFloat(d.basePrice)
-    }));
+    };
+}
+
+// Specific wrappers mapped to Supabase columns (camelCase local -> snake_case supabase)
+async function fetchServices() {
+    const data = await getCollection('services', 'cf_services');
+    return data.map(mapDatabaseServiceToModel);
 }
 async function fetchTreatments() { return await getCollection('treatments', 'cf_treatments'); }
 async function fetchDurations() { return await getCollection('durations', 'cf_durations'); }
@@ -154,35 +158,38 @@ async function fetchCouriers() {
     return local.filter(u => u.role === 'courier');
 }
 
+function mapDatabaseOrderToModel(o) {
+    return {
+        id: o.id,
+        customerName: o.customer_name,
+        customerPhone: o.customer_phone,
+        serviceId: o.service_id,
+        treatmentId: o.treatment_id,
+        durationId: o.duration_id,
+        qty: parseFloat(o.qty),
+        price: parseFloat(o.price),
+        address: o.address,
+        status: o.status,
+        courierId: o.courier_id,
+        notes: o.notes,
+        pickupDate: o.pickup_date,
+        pickupTime: o.pickup_time,
+        deliveryDate: o.delivery_date,
+        deliveryTime: o.delivery_time,
+        paymentMethod: o.payment_method,
+        paymentStatus: o.payment_status,
+        rating: o.rating,
+        reviewText: o.review_text,
+        dateCreated: o.date_created,
+        customer_id: o.customer_id
+    };
+}
+
 async function fetchOrders() {
     if (supabaseActive) {
         const { data, error } = await supabase.from('orders').select('*');
         if (!error) {
-            // Map snake_case to camelCase for UI compatibility
-            return data.map(o => ({
-                id: o.id,
-                customerName: o.customer_name,
-                customerPhone: o.customer_phone,
-                serviceId: o.service_id,
-                treatmentId: o.treatment_id,
-                durationId: o.duration_id,
-                qty: parseFloat(o.qty),
-                price: parseFloat(o.price),
-                address: o.address,
-                status: o.status,
-                courierId: o.courier_id,
-                notes: o.notes,
-                pickupDate: o.pickup_date,
-                pickupTime: o.pickup_time,
-                deliveryDate: o.delivery_date,
-                deliveryTime: o.delivery_time,
-                paymentMethod: o.payment_method,
-                paymentStatus: o.payment_status,
-                rating: o.rating,
-                reviewText: o.review_text,
-                dateCreated: o.date_created,
-                customer_id: o.customer_id
-            }));
+            return data.map(mapDatabaseOrderToModel);
         }
     }
     return JSON.parse(localStorage.getItem('cf_orders')) || [];
@@ -417,6 +424,10 @@ function renderHeaderAuth() {
     }
 }
 
+function isUserAuthorized(userRole, requiredRole) {
+    return userRole === requiredRole;
+}
+
 // Protected route checks
 function tryNavigateToRole(role, targetSubTab) {
     if (!sessionUser) {
@@ -426,7 +437,7 @@ function tryNavigateToRole(role, targetSubTab) {
         return;
     }
 
-    if (sessionUser.role !== role) {
+    if (!isUserAuthorized(sessionUser.role, role)) {
         alert(`Akses Ditolak! Anda masuk sebagai ${sessionUser.role}, tidak bisa mengakses halaman ${role}. Silakan logout terlebih dahulu.`);
         return;
     }
@@ -791,31 +802,27 @@ window.applyCouponCode = async function() {
     await buildBookingSummaryHTML();
 };
 
-async function calculateBookingPrice() {
-    const services = await fetchServices();
-    const treatments = await fetchTreatments();
-    const durations = await fetchDurations();
-
-    const selectedServiceId = document.getElementById("book-service").value;
-    const selectedService = services.find(s => s.id === selectedServiceId);
-    const treatment = treatments.find(t => t.id === bookSelectedTreatment);
-    const duration = durations.find(d => d.id === bookSelectedDuration);
-
+function computePrice({ selectedService, treatment, duration, weight, bookSelectedItems, services, selectedCouponCode }) {
     let price = 0;
     let qtyDetails = "";
 
+    if (!selectedService || !treatment || !duration) {
+        return { base: 0, discount: 0, final: 0, qtyDetails: "" };
+    }
+
     if (selectedService.category === "Kiloan") {
-        const weight = parseFloat(document.getElementById("book-kiloan-qty").value) || 1;
         price = selectedService.basePrice * treatment.multiplier * duration.multiplier * weight;
         qtyDetails = `${weight} Kg`;
     } else {
         let subtotal = 0;
         const details = [];
-        for (const [srvId, qty] of Object.entries(bookSelectedItems)) {
+        for (const [srvId, qty] of Object.entries(bookSelectedItems || {})) {
             if (qty > 0) {
                 const itemSrv = services.find(s => s.id === srvId);
-                subtotal += itemSrv.basePrice * qty;
-                details.push(`${qty}x ${itemSrv.name.replace("Cuci ", "")}`);
+                if (itemSrv) {
+                    subtotal += itemSrv.basePrice * qty;
+                    details.push(`${qty}x ${itemSrv.name.replace("Cuci ", "")}`);
+                }
             }
         }
         price = subtotal * treatment.multiplier * duration.multiplier;
@@ -834,6 +841,28 @@ async function calculateBookingPrice() {
         final: Math.round(finalPrice),
         qtyDetails
     };
+}
+
+async function calculateBookingPrice() {
+    const services = await fetchServices();
+    const treatments = await fetchTreatments();
+    const durations = await fetchDurations();
+
+    const selectedServiceId = document.getElementById("book-service").value;
+    const selectedService = services.find(s => s.id === selectedServiceId);
+    const treatment = treatments.find(t => t.id === bookSelectedTreatment);
+    const duration = durations.find(d => d.id === bookSelectedDuration);
+    const weight = parseFloat(document.getElementById("book-kiloan-qty").value) || 1;
+
+    return computePrice({
+        selectedService,
+        treatment,
+        duration,
+        weight,
+        bookSelectedItems,
+        services,
+        selectedCouponCode
+    });
 }
 
 async function buildBookingSummaryHTML() {
@@ -2431,3 +2460,11 @@ if (globalNavbar) {
         lastScrollTop = scrollTop <= 0 ? 0 : scrollTop; // Prevent negative scrolling values on iOS
     }, { passive: true });
 }
+
+// Export functions for unit testing
+export {
+    computePrice,
+    mapDatabaseOrderToModel,
+    mapDatabaseServiceToModel,
+    isUserAuthorized
+};
